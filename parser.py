@@ -1,10 +1,23 @@
 import requests
 from bs4 import BeautifulSoup as bs
+import re
 
 headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9}',
             'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko'}
 
+# В дальнейшем будет инпут через Jupyter Notebook
 base_url = 'https://auto.ru/cars/bmw/1er/20371753/all/?sort=fresh_relevance_1-desc&km_age_to=100000&km_age_from=50000&page=1'
+
+class AdCarItem:
+    def __init__(self, title, cost, currency, killometrage, car_age, location, link='-'):
+        self.title = title
+        self.cost = cost
+        self.curreny = currency
+        self.killometrage = killometrage
+        self.car_age = car_age
+        self.location = location
+        if link != '-':
+            self.link = link
 
 def auto_ru_parce(base_url, headers):
     session = requests.Session()
@@ -17,21 +30,26 @@ def auto_ru_parce(base_url, headers):
         # f.close()
 
         items = soup.find_all("div", attrs = {'class':'ListingCars-module__listingItem'})
+        # items - blocks with one car in each
         for item in items:
+            # TITLE
             title = item.find('a',attrs={'class':'ListingItemTitle-module__link'}).text
+            # COST + curreny
             cost = item.find('div',attrs = {'class':'ListingItemPrice-module__content'}).text
-            print(cost)
+            if re.search('₽', str(cost)) != None:
+                currency = 'RUB'
+            elif re.search('€', str(cost)) != None:
+                currency = 'EUR'
+            elif re.search('$', str(cost)) != None:
+                currency = 'USD'
+            cost = re.sub('[^0-9]','',cost)
+            print(title,cost,currency)
+            # KM
+            # YEAR
+            # CAR_AGE
+            # LOCATION
+            # LINK
     else:
         print('Fail')
 
 auto_ru_parce(base_url,headers)
-
-# \<div class="ListingItemPrice-module__content" wfd-id="503">877&nbsp;000&nbsp;₽</div>
-# ListingItemTitle-module__link<div class="ListingItemSequential-module__container ListingCars-module__listingItem" wfd-id="468"><div class="ListingItemSequential-module__enclose" wfd-id="469"><div class="ListingItemSequential-module__column ListingItemSequential-module__columnColor" wfd-id="488"><div class="ListingItemSequential-module__color" style="color:#ff9966" wfd-id="489"><svg class="IconBodyType IconBodyType_hatchback_5_doors bodyType_color_ff9966"><use xlink:href="#hatchback_5_doors"></use></svg></div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnSummary" wfd-id="482"><div class="ListingItemSequential-module__summary" wfd-id="483"><div class="ListingItemSequential-module__summaryLeft" wfd-id="485"><h3 class="ListingItemTitle-module__container ListingItemSequential-module__title"><a class="Link ListingItemTitle-module__link" href="https://auto.ru/cars/used/sale/bmw/1er/1094528516-1ab44a74/?sort=fresh_relevance_1-desc" target=" _blank">BMW 1 серия  II (F20/F21) Рестайлинг 118i<div wfd-id="486"><div class="ListingItemTitle-module__clicker" wfd-id="487"></div></div></a></h3></div><div class="ListingItemSequential-module__summaryRight" wfd-id="484"><div class="Button Button_color_white Button_size_s Button_type_div Button_width_default ButtonFavorite-module__container ButtonFavorite-module__s ListingItemSequential-module__favorite" type="div" wfd-id="863"><span class="Button__content" wfd-id="864"><span class="ButtonFavorite-module__content HoveredTooltip__trigger" wfd-id="865"> <svg class="IconSvg IconSvg_favorite-small IconSvg_size_24 ButtonFavorite-module__icon"><use xlink:href="#favorite-small"></use></svg> <!-- --> </span></span></div></div></div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnPrice" wfd-id="479"><div class="ListingItemPrice-module__container ListingItemSequential-module__price" wfd-id="480"><div class="ListingItemPrice-module__content" wfd-id="481">1&nbsp;090&nbsp;000&nbsp;₽</div></div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnKmAge" wfd-id="477"><div class="ListingItemSequential-module__kmAge" wfd-id="478">68 620 км</div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnYear" wfd-id="475"><div class="ListingItemSequential-module__year" wfd-id="476">2017</div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnEngine" wfd-id="473"><div class="ListingItemSequential-module__engine" wfd-id="474">1.5&nbsp;AT</div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnPlace" wfd-id="471"><div class="ListingItemSequential-module__place" wfd-id="472">Раздоры</div><a class="Link ListingItemSalonName-module__container ListingItemSequential-module__salonName" href="https://auto.ru/diler/cars/all/baltavtotreyd_moskva/?from=auto-snippet" target=" _blank">БалтАвтоТрейд</a></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnServices" wfd-id="470"></div></div></div>
-# <a class="Link ListingItemTitle-module__link" href="https://auto.ru/cars/used/sale/bmw/1er/1093051630-cb33a166/?sort=fresh_relevance_1-desc" target=" _blank">BMW 1 серия  II (F20/F21) Рестайлинг 118i<div wfd-id="508"><div class="ListingItemTitle-module__clicker" wfd-id="509"></div></div></a>
-
-# <a class="Link Link_hovered ListingItemTitle-module__link" href="https://auto.ru/cars/used/sale/bmw/1er/1093168994-d03a0bbd/?sort=fresh_relevance_1-desc" target=" _blank">BMW 1 серия  II (F20/F21) Рестайлинг 118i<div wfd-id="530"><div class="ListingItemTitle-module__clicker" wfd-id="531"></div></div></a>
-#listing-filters > div.ListingCars-module__container.ListingCars-module__table > div:nth-child(2)
-# <div class="ListingItemSequential-module__enclose" wfd-id="513"><div class="ListingItemSequential-module__column ListingItemSequential-module__columnColor" wfd-id="532"><div class="ListingItemSequential-module__color" style="color:#fc4829" wfd-id="533"><svg class="IconBodyType IconBodyType_hatchback_5_doors bodyType_color_fc4829"><use xlink:href="#hatchback_5_doors"></use></svg></div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnSummary" wfd-id="526"><div class="ListingItemSequential-module__summary" wfd-id="527"><div class="ListingItemSequential-module__summaryLeft" wfd-id="529"><h3 class="ListingItemTitle-module__container ListingItemSequential-module__title"><a class="Link ListingItemTitle-module__link" href="https://auto.ru/cars/used/sale/bmw/1er/1093168994-d03a0bbd/?sort=fresh_relevance_1-desc" target=" _blank">BMW 1 серия  II (F20/F21) Рестайлинг 118i<div wfd-id="530"><div class="ListingItemTitle-module__clicker" wfd-id="531"></div></div></a></h3></div><div class="ListingItemSequential-module__summaryRight" wfd-id="528"><div class="Button Button_color_white Button_size_s Button_type_div Button_width_default ButtonFavorite-module__container ButtonFavorite-module__s ListingItemSequential-module__favorite" type="div"><span class="Button__content"><span class="ButtonFavorite-module__content HoveredTooltip__trigger"> <svg class="IconSvg IconSvg_favorite-small IconSvg_size_24 ButtonFavorite-module__icon"><use xlink:href="#favorite-small"></use></svg> <!-- --> </span></span></div></div></div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnPrice" wfd-id="523"><div class="ListingItemPrice-module__container ListingItemSequential-module__price" wfd-id="524"><div class="ListingItemPrice-module__content" wfd-id="525">945&nbsp;000&nbsp;₽</div></div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnKmAge" wfd-id="521"><div class="ListingItemSequential-module__kmAge" wfd-id="522">83 500 км</div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnYear" wfd-id="519"><div class="ListingItemSequential-module__year" wfd-id="520">2015</div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnEngine" wfd-id="517"><div class="ListingItemSequential-module__engine" wfd-id="518">1.5&nbsp;AT</div></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnPlace" wfd-id="515"><div class="ListingItemSequential-module__place" wfd-id="516">Москва</div><a class="Link ListingItemSalonName-module__container ListingItemSequential-module__salonName" href="https://auto.ru/diler/cars/all/avtospeccentr_vnukovo_moskva/?from=auto-snippet" target=" _blank">АвтоСпецЦентр Внуково - автомобили с пробегом</a></div><div class="ListingItemSequential-module__column ListingItemSequential-module__columnServices" wfd-id="514"></div></div>
-# <a class="Link ListingItemTitle-module__link" href="https://auto.ru/cars/used/sale/bmw/1er/1093168994-d03a0bbd/?sort=fresh_relevance_1-desc" target=" _blank">BMW 1 серия  II (F20/F21) Рестайлинг 118i<div wfd-id="530"><div class="ListingItemTitle-module__clicker" wfd-id="531"></div></div></a>
-   # User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko
