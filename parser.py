@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup as bs
 import re
 import time
 import datetime
+import pandas as pd
+import openpyxl
 now = datetime.datetime.now()
 
 headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9}',
@@ -38,11 +40,11 @@ class CarAdItem:
             currency = 'USD'
         else:
             currency = 'Unknown'
-        cost = re.sub('[^0-9]', '', cost)
+        cost = int(re.sub('[^0-9]', '', cost))
         return cost, currency
     def get_km(self, item):
         km = item.find('div', attrs={'class': 'ListingItemSequential-module__kmAge'}).text
-        return re.sub('[^0-9]', '', km)
+        return int(re.sub('[^0-9]', '', km))
     def get_age(self, item):
         produced_year = item.find('div', attrs={'class': 'ListingItemSequential-module__year'}).text
         return now.year - int(produced_year)
@@ -53,6 +55,10 @@ class CarAdItem:
         print('Age:', self.car_age)
         print('Location:', self.location)
         print('Link:', self.link)
+    def ad_insert(self, df):
+        i = len(df)
+        df.loc[i] = [self.title] + [self.cost] + [self.currency]\
+         + [self.km] + [self.car_age] + [self.location] + [self.link]
 
 def auto_ru_parce(base_url, headers):
     session = requests.Session()
@@ -63,6 +69,7 @@ def auto_ru_parce(base_url, headers):
                         .find('span', attrs={'class':'ListingPagination-module__pages'})\
                         .find_all('a', attrs ={'class':'ListingPagination-module__page'})[-1]\
                         .find('span',attrs={'class':'Button__text'}).text)
+        df = pd.DataFrame(columns=['Title', 'Cost', 'Currency', 'Killometrage', 'Age', 'Location', 'link'])
 
         for page in range(1,pages_count+1):
             url = base_url + '&page=' + str(page)
@@ -72,11 +79,12 @@ def auto_ru_parce(base_url, headers):
             for item in items:
                 ad = CarAdItem(item)
                 ad.show_info()
+                ad.ad_insert(df)
                 print('')
-            time.sleep(3)
+            time.sleep(2)
 
     else:
         print('Fail')
-
+    df.to_excel('Output.xlsx', encoding='utf-8-sig', index=False)
 
 auto_ru_parce(base_url, headers)
