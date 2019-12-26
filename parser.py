@@ -11,7 +11,7 @@ headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,imag
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko'}
 
 # В дальнейшем будет инпут через Jupyter Notebook
-base_url = 'https://auto.ru/moskva/cars/hyundai/solaris/20162370/all/?km_age_from=50000&km_age_to=10000&sort=fresh_relevance_1-desc&output_type=table&page=1'
+base_url = 'https://auto.ru/cars/bmw/x5/4601198/all/?sort=fresh_relevance_1-desc&output_type=table&page=1'
 base_url = re.sub('&page=1','',base_url)
 base_url = re.sub('output_type=list','output_type=table',base_url)
 
@@ -31,6 +31,9 @@ class CarAdItem:
         self.location = ad.find('div', attrs={'class': 'ListingItemSequential-module__place'}).text
         self.link = ad.find('a', attrs={'class': 'ListingItemTitle-module__link'})['href']
     def get_cost_info(self, item):
+        """"
+        Currency check and separate
+        """
         cost = item.find('div',attrs = {'class': 'ListingItemPrice-module__content'}).text
         if re.search('₽', str(cost)) != None:
             currency = 'RUB'
@@ -43,12 +46,21 @@ class CarAdItem:
         cost = int(re.sub('[^0-9]', '', cost))
         return cost, currency
     def get_km(self, item):
+        """
+        Killometrage formating
+        """
         km = item.find('div', attrs={'class': 'ListingItemSequential-module__kmAge'}).text
         return int(re.sub('[^0-9]', '', km))
     def get_age(self, item):
+        """
+        car's age calculation
+        """
         produced_year = item.find('div', attrs={'class': 'ListingItemSequential-module__year'}).text
         return now.year - int(produced_year)
     def show_info(self):
+        """
+        show info about ad
+        """
         print('Title:', self.title)
         print('Cost:', self.cost, self.currency)
         print('Killometrage:', self.km)
@@ -60,7 +72,15 @@ class CarAdItem:
         df.loc[i] = [self.title] + [self.cost] + [self.currency]\
          + [self.km] + [self.car_age] + [self.location] + [self.link]
 
-def auto_ru_parce(base_url, headers):
+def auto_ru_parce(base_url, headers = headers):
+    """
+    Parser for web site AUTO.ru
+    Approximately 3-5 secs for one page parse
+    :param base_url: Url from auto.ru to parse (all pages will parser)
+    :param headers: param for request - optional
+    :returns: df - dataframe with ad data
+    also create excel file - Output.xlsx - in current directory with data of df
+    """
     session = requests.Session()
     request = session.get(base_url, headers = headers)
     if request.status_code == 200:
@@ -86,5 +106,6 @@ def auto_ru_parce(base_url, headers):
     else:
         print('Fail')
     df.to_excel('Output.xlsx', encoding='utf-8-sig', index=False)
+    return df
 
 auto_ru_parce(base_url, headers)
