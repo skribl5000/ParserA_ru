@@ -11,7 +11,7 @@ headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,imag
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko'}
 
 # В дальнейшем будет инпут через Jupyter Notebook
-base_url = 'https://auto.ru/cars/bmw/x5/4601198/all/?sort=fresh_relevance_1-desc&output_type=table&page=1'
+base_url = 'https://auto.ru/cars/mercedes/c_klasse/7308824/all/?sort=fresh_relevance_1-desc'
 base_url = re.sub('&page=1','',base_url)
 base_url = re.sub('output_type=list','output_type=table',base_url)
 
@@ -28,7 +28,7 @@ class CarAdItem:
         self.cost, self.currency = self.get_cost_info(ad)
         self.km = self.get_km(ad)
         self.car_age = self.get_age(ad)
-        self.location = ad.find('div', attrs={'class': 'ListingItemSequential-module__place'}).text
+        self.location = self.get_location(ad)
         self.link = ad.find('a', attrs={'class': 'ListingItemTitle-module__link'})['href']
     def get_cost_info(self, item):
         """"
@@ -49,14 +49,36 @@ class CarAdItem:
         """
         Killometrage formating
         """
-        km = item.find('div', attrs={'class': 'ListingItemSequential-module__kmAge'}).text
-        return int(re.sub('[^0-9]', '', km))
+        km = item.find('div', attrs={'class': 'ListingItemSequential-module__kmAge'})
+        if km == None:
+            km = item.find('div', attrs={'class': 'ListingItem-module__kmAge'})
+        if km == None:
+            print('Killometrage does not found')
+            return 'Undefinded'
+        return int(re.sub('[^0-9]', '', km.text))
     def get_age(self, item):
         """
         car's age calculation
         """
-        produced_year = item.find('div', attrs={'class': 'ListingItemSequential-module__year'}).text
-        return now.year - int(produced_year)
+        produced_year = item.find('div', attrs={'class': 'ListingItemSequential-module__year'})
+        if produced_year == None:
+            produced_year = item.find('div', attrs={'class': 'ListingItem-module__year'})
+        if produced_year == None:
+            print('Age does not found')
+            return 'Undefinded'
+        return now.year - int(produced_year.text)
+    def get_location(self, item):
+        """
+        getting ad's location
+        """
+        loc = item.find('div', attrs={'class': 'ListingItemSequential-module__place'})
+        if loc == None:
+            loc = item.find('span', attrs={'class': 'MetroListPlace__regionName'})
+        if loc == None:
+            print('Location does not found')
+            return 'Undefinded'
+        return loc.text
+
     def show_info(self):
         """
         show info about ad
