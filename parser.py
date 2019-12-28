@@ -11,7 +11,7 @@ headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,imag
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko'}
 
 # В дальнейшем будет инпут через Jupyter Notebook
-base_url = 'https://auto.ru/cars/mercedes/c_klasse/7308824/all/?sort=fresh_relevance_1-desc'
+base_url = 'https://auto.ru/moskva/cars/toyota/land_cruiser/7953212/all/?sort=fresh_relevance_1-desc'
 base_url = re.sub('&page=1','',base_url)
 base_url = re.sub('output_type=list','output_type=table',base_url)
 
@@ -90,11 +90,17 @@ class CarAdItem:
         print('Location:', self.location)
         print('Link:', self.link)
     def ad_insert(self, df):
+        """
+        inserts ad to DataFrame
+        :param df: pandas DataFrame for appending new ad
+        :returns: None
+        """
         i = len(df)
         df.loc[i] = [self.title] + [self.cost] + [self.currency]\
          + [self.km] + [self.car_age] + [self.location] + [self.link]
 
-def auto_ru_parce(base_url, headers = headers):
+
+def auto_ru_parce(base_url, df, headers = headers):
     """
     Parser for web site AUTO.ru
     Approximately 3-5 secs for one page parse
@@ -107,27 +113,27 @@ def auto_ru_parce(base_url, headers = headers):
     request = session.get(base_url, headers = headers)
     if request.status_code == 200:
         soup = bs(request.content, 'html.parser')
-        pages_count = int(soup\
-                        .find('span', attrs={'class':'ListingPagination-module__pages'})\
-                        .find_all('a', attrs ={'class':'ListingPagination-module__page'})[-1]\
-                        .find('span',attrs={'class':'Button__text'}).text)
-        df = pd.DataFrame(columns=['Title', 'Cost', 'Currency', 'Killometrage', 'Age', 'Location', 'link'])
-
-        for page in range(1,pages_count+1):
-            url = base_url + '&page=' + str(page)
-            request = session.get(url, headers = headers)
-            items = soup.find_all("div", attrs = {'class': 'ListingCars-module__listingItem'})
-            # items - blocks with one car in each
-            for item in items:
-                ad = CarAdItem(item)
-                ad.show_info()
-                ad.ad_insert(df)
-                print('')
+        url = base_url
+        request = session.get(url, headers = headers)
+        items = soup.find_all("div", attrs = {'class': 'ListingCars-module__listingItem'})
+        # items - blocks with one car in each
+        for item in items:
+            ad = CarAdItem(item)
+            ad.show_info()
+            ad.ad_insert(df)
+            print('')
+        next = soup.find('link',attrs={'rel': 'next'})
+        if next != None:
+            # If there is "NEXT" button => continue parsing to the next page
             time.sleep(2)
-
+            next_url = next['href']
+            auto_ru_parce(next_url, df, headers)
+        else:
+            df.to_excel('Output.xlsx', encoding='utf-8-sig', index=False)
+            return df
     else:
         print('Fail')
-    df.to_excel('Output.xlsx', encoding='utf-8-sig', index=False)
-    return df
+        return 1
 
-auto_ru_parce(base_url, headers)
+df = pd.DataFrame(columns=['Title', 'Cost', 'Currency', 'Killometrage', 'Age', 'Location', 'link'])
+auto_ru_parce(base_url, df, headers)
