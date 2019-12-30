@@ -13,7 +13,7 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; rv:11.0) like Gecko'}
 
 # В дальнейшем будет инпут через Jupyter Notebook
-base_url = 'https://auto.ru/moskva/cars/toyota/land_cruiser/7953212/all/?sort=fresh_relevance_1-desc'
+base_url = 'https://auto.ru/magnitogorsk/cars/mazda/all/'
 base_url = re.sub('&page=1', '', base_url)
 base_url = re.sub('output_type=list', 'output_type=table', base_url)
 
@@ -36,9 +36,9 @@ def get_age(item):
     car's age calculation
     """
     produced_year = item.find('div', attrs={'class': 'ListingItemSequential-module__year'})
-    if produced_year is not None:
+    if produced_year is None:
         produced_year = item.find('div', attrs={'class': 'ListingItem-module__year'})
-    if produced_year is not None:
+    if produced_year is None:
         print('Age does not found')
         return 'Undefended'
     return now.year - int(produced_year.text)
@@ -54,6 +54,8 @@ def get_km(item):
     if km is None:
         print('Killometrage does not found')
         return 'Undefended'
+    if km.text == 'Новый':
+        return 0
     return int(re.sub('[^0-9]', '', km.text))
 
 
@@ -112,8 +114,7 @@ class CarAdItem:
         df.loc[i] = [self.title] + [self.cost] + [self.currency] \
                     + [self.km] + [self.car_age] + [self.location] + [self.link]
 
-
-def auto_ru_parse(base_url, df, headers=headers):
+def auto_ru_parse(base_url, df, headers=headers,current_count = 0):
     """
     Parser for web site AUTO.ru
     Approximately 3-5 secs for one page parse
@@ -128,21 +129,26 @@ def auto_ru_parse(base_url, df, headers=headers):
         soup = bs(request.content, 'html.parser')
         url = base_url
         request = session.get(url, headers=headers)
+        total_count = soup.find('span', attrs={'class': 'ButtonWithLoader__content'})
+
+        if total_count is not None:
+            total_count = int(re.sub('[^0-9]', '', total_count.text))
         items = soup.find_all("div", attrs={'class': 'ListingCars-module__listingItem'})
         # items - blocks with one car in each
+        current_count += len(items)
+        print(current_count,'/',total_count)
         for item in items:
             ad = CarAdItem(item)
-            ad.show_info()
+            # ad.show_info()
             ad.ad_insert(df)
-            print('')
         next_page = soup.find('link', attrs={'rel': 'next'})
+        df.to_excel('Output.xlsx', encoding='utf-8-sig', index=False)
         if next_page is not None:
             # If there is "NEXT" button => continue parsing to the next page
             time.sleep(2)
             next_url = next_page['href']
-            auto_ru_parse(next_url, df, headers)
+            auto_ru_parse(next_url, df, headers, current_count)
         else:
-            df.to_excel('Output.xlsx', encoding='utf-8-sig', index=False)
             return df
     else:
         print('Fail')
