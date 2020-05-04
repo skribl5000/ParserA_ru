@@ -52,7 +52,7 @@ class CarAdItem:
         """
         return {
             'Title': self.title,
-            'Cost:': self.cost,
+            'Cost': self.cost,
             'Currency': self.currency,
             'Killometrage': self.km,
             'Age': self.car_age,
